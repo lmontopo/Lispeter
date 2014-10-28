@@ -55,6 +55,7 @@ def check_type(x):
 		
 			
 def is_number(x):
+	print x, type(x), 'this is what were is_num testing'
 	try:
 		float(x)
 		return True
@@ -68,45 +69,35 @@ def is_number(x):
 
 # --- DICTIONARY OF VARIABLES --- 
 
+class Scope(object):
+	def __init__(self, env, parent):
+		self.env = env
+		self.parent = parent
 
+	def add_values(self,key,value):
+		self.env[key] = value
 
-env = { }
+	def fetch(self, key):
+		if key in self.env.keys():
+			return self.env[key]
+		elif self.parent != None:
+			return self.parent.fetch(key)
 
-class define_function(object):
-	def __init__(self, params, exp):
-		self.params = params
-		self.exp = exp
-		self.env = {}
-
-	def set_params(self,values):
-			pram_values = zip(self.params, values)
-			for i, j in param_values: 
-				self.env[i] = j
-			return self.env
-
-	def call_fun(self, values):
-		return evaluate(self.exp, self.set_params(values))
-		
-	
 
 # ----- INTERPRETER -------
 def outter_evaluate(list_input,env):
-	last = len(list_input)
-	
-	for expression in list_input:
-		evaluate(expression, env)
+	evaluated_list = []
+	scope = Scope({}, None)
 
-	return evaluate(list_input[last-1], env)
+	for expression in list_input:
+		evaluated_list.append(evaluate(expression,scope))
+
+	return evaluated_list[-1] 
 
 
 
 def evaluate(list_input,env):
-	print list_input
 
-	if type(list_input) is tuple:
-		for item in list_input:
-			evaluate(item, env)
-	
 	if not type(list_input) is list:
 	 	return is_atom(list_input,env)
 	
@@ -117,24 +108,32 @@ def evaluate(list_input,env):
 
 
 def is_atom(list_input,env):
-	print list_input, env, 'atom'
 	
 	if is_number(list_input):			
 		return float(list_input)
 	elif list_input[0] == "'":   				
 		return list_input[1:]
 	elif list_input == 'else': 				
-		return False	
+		return True	
 	elif list_input in symbol:
 		return list_input
-	else:
+	else: 
 		try:
-			return env[list_input]	
-			print env[list_input], 'dict?'		
+			print 'try to fetch value for:', list_input
+			value = env.fetch(list_input)
+			if is_number(value):
+				return value
+			elif len(value) == 2:
+				return list_input
+			else:
+				print 'we should not have gotten here'
+				return none
 		except KeyError: 
-			return list_input
+			print 'keyerror'
+		 	return list_input
 		except TypeError:
-			return list_input
+			print 'TypeError'
+		 	return list_input
 
 
 
@@ -152,6 +151,7 @@ def is_cons(list_input,env):
 
 
 def call_special(list_input, env):
+
 	head, rest = list_input[0], list_input[1:]
 	
 	if head == 'cond':
@@ -164,27 +164,29 @@ def call_special(list_input, env):
 			break
 
 	if head == 'define':
+		
 		if len(rest) == 2:
 			name, exp = rest[0] , rest[1]
 			fn , params = name[0], name[1:]
-			env[fn] = define_function(params, exp)
-			print env, 'env'
-			return None	
+			env.add_values(fn, (params, exp))
+			return None
 		else:
 			raise SyntaxError('too many arguments')
- 
+
 
 	
 	
 	
 def call_regular(list_input,env):
 	new_list_input =[]
-	
+
 	for term in list_input:
 		new_list_input.append(evaluate(term,env))
 	
 	list_input = new_list_input
 	head, rest = list_input[0], list_input[1:]
+	print head, rest, 'our new head rest in call regular'
+
 	
 
 	#basic math and boolean operations
@@ -237,22 +239,24 @@ def call_regular(list_input,env):
 			i += 1
 		return python_list
 
-	if head in env.keys():
-		print 'do we make it here?'
-		return head.call_fun(rest)
+	#finding functions we defined
+	else:
+		func_statement = env.fetch(head)
+		params = func_statement[0]
+		exp = func_statement[1]
+		zipped = zip(params, rest)
+		inner_scope = Scope({},env)
+		for first, second in zipped:
+ 			inner_scope.add_values(first,second)
+ 		return evaluate(exp, inner_scope)
 
 
 
-
-
-#input = "(cond ((< 3 2) 1) ((= 3 2) 2) ((> 3 2) (quote here!)))"
-#input = '(define (f x y) (+ x y))(f 1 2)' 
-#input = '(list)(list)'
 
 #------ Putting Everything Together ------ 
 def interpret(input):
 	output = outter_evaluate(parse(tokenizer(input)), env={})
 	return output
 
-
-#print interpret(input)
+input = '(define (func x y) (+ x y))(func 4 1)'
+print interpret(input)
