@@ -6,7 +6,8 @@ from sys import exit
 
 symbol = ['+', '-', '*', '/', '<', '>','<=', '=','>=', 'abs', 'list', 'if', 'not',
 			'set!', 'begin', 'let', 'define', 'lambda', 'quote']
-special = ['set!', 'begin', 'let', 'define', 'lambda', 'cond', 'quote', 'if', 'map', 'cons', 'car', 'cdr']
+special = ['set!', 'begin', 'let', 'define', 'lambda', 'cond', 'quote', 'if', 
+	'list', 'map', 'cons', 'car', 'cdr']
 
 
 # --- EXCEPTIONs ---
@@ -14,13 +15,12 @@ class MyError(Exception):
 	def __init__(self, msg):
 		self.msg = msg
 
-if_error = MyError("Error: you need to specify by a consequence and an alternate")
-dict_error = MyError("Error: can't find element in dictionary.  Improper input")
-first_error = MyError('Error: unexpectedly entered parse function with no input')
-too_many = MyError("Error: too many arguments were inputed")
-quote_error = MyError('Error: quote only takes one operand')
-let_error = MyError('Error: let must be followed by a list')
-abs_error = MyError('Error: abs takes only one operand!')
+if_error = MyError("Error: you need to specify by a consequence and an alternate.")
+dict_error = MyError("Error: can't find element in dictionary. Improper input.")
+first_error = MyError('Error: unexpectedly entered parse function with no input.')
+too_many = MyError("Error: too many arguments were inputed.")
+quote_error = MyError('Error: quote only takes one operand.')
+let_error = MyError('Error: let must be followed by a list.')
 
 # ---- TOKENIZE ------ 
 def tokenizer(holder):
@@ -30,14 +30,12 @@ def tokenizer(holder):
 	final = filter(lambda a: a != '', holder.split(' '))
 	return final
 
-
   
 # ---- PARSER ----- 
 def parse(tokens):
 	if len(tokens) == 0:
 		raise first_error
 	
-
 	token = tokens[0]
 	tokens = tokens[1:]
 
@@ -102,11 +100,14 @@ def greater(args):
 def greater_eq(args):
 	return args[:-1] >= args[1:]
 
+def not_func(args):
+	return not(args)
+
 
 
 # --- DEFINING SCOPE --- 
 class Scope(object):
-	def __init__(self, env, parent):
+	def __init__(self, env, parent = None):
 		self.env = env
 		self.parent = parent
 
@@ -121,11 +122,12 @@ class Scope(object):
 
 
 # --- CLASS OF FUNCTIONS ---
-class MakeFun(object):
-	def __init__(self, everything):
-		self.everything = everything
-		self.params = self.everything[0]
-		self.exp = self.everything[-1]
+class MakeLambda(object):
+	def __init__(self, first, second):
+		self.first = first
+		self.second = second
+		self.params = self.first
+		self.exp = self.second[-1]
 
 	def do_fun(self, args, env):
 		zipped = zip(self.params, args)
@@ -135,12 +137,23 @@ class MakeFun(object):
 		return evaluate(self.exp, temp_scope)
 
 
+class MakePyFun(object):
+	def __init__(self, everything):
+		self. everything = everything
+
+	def do_fun(self, arguments, env):
+		if len(arguments) > 1:
+			return self.everything(arguments)
+		elif len(arguments) == 1:
+			return self.everything(*arguments)
+
+
 
 # ----- INTERPRETER -------
 def outter_evaluate(list_input,env):
 	evaluated_list = []
 	for expression in list_input:
-		evaluated_list.append(evaluate(expression,scope))
+		evaluated_list.append(evaluate(expression, env))
 	return evaluated_list[-1]
 
 
@@ -169,12 +182,11 @@ def is_atom(list_input,env):
 				return value
 			if type(value) is list:
 				return evaluate(value, env)
-			# else: 
-			# 	return list_input
+			else:
+				return list_input
 		except: #catches all exceptions
 			raise dict_error
-		else:
-			raise dict_error
+	
 
 
 def is_cons(list_input,env):
@@ -189,7 +201,6 @@ def is_cons(list_input,env):
 
 
 def call_special(list_input, env):
-
 	head, rest = list_input[0], list_input[1:]
 
 	if head == "map":
@@ -200,7 +211,6 @@ def call_special(list_input, env):
 				new_item = interpret("(%s %s)" %(new_head, item), env)
 				new_list.append(new_item)
 			return new_list
-	
 	
 	if head == 'cond':
 		switch = 1
@@ -217,34 +227,34 @@ def call_special(list_input, env):
 				env.add_values(rest[0], rest[1])
 			else:
 				name = rest[0][0]
-				expression = (["lambda", rest[0][1:], rest[1]])
+				expression = MakeLambda(rest[0][1:], rest[1:])
 				env.add_values(name, expression)
 		else:
 			raise too_many
 
-	
 	if head == 'lambda':
-		func = MakeFun(rest)
-		return func
-
+		func = MakeLambda(rest[0],rest[1:])
+		env.add_values('lam', func)
+		return 'lam'
+		
 
 	if head == 'if':
 		try: 
 			condition, consequence, alt = rest[0], rest[1], rest[2]
-			if evaluate(condition, env):
-				return evaluate(consequence, env)
-			elif not evaluate(condition, env):
-				return evaluate(alt, env)
 		except:
 			raise if_error
-
+		
+		if evaluate(condition, env):
+			return evaluate(consequence, env)
+		else:
+			return evaluate(alt, env)
+		
 
 	if head == 'quote':
 		if len(list_input) == 2:
 			return rest[0]
 		else:
 			raise quote_error
-		
 
 	if head == 'let':
 		local_scope = Scope({},env)
@@ -255,7 +265,6 @@ def call_special(list_input, env):
 			return evaluate(rest[1], local_scope)
 		else:
 			raise let_error
-
 
 	if head == 'set!':
 		if len(rest) == 2:
@@ -271,7 +280,6 @@ def call_special(list_input, env):
 				set_error = MyError('Error: %s has not yet been defined' % name)
 				raise set_error
 
-
 	if head == 'begin':
 		return outter_evaluate(rest,env)
 
@@ -281,6 +289,16 @@ def call_special(list_input, env):
 			for item in rest:
 				cons_list.append(evaluate(item,env))
 			return cons_list
+
+	if head == 'list':
+		python_list = []
+		list_size = len(list_input)
+		i = 1
+		while i < len(list_input):
+			item = list_input[i] # we do not evaluate here because they have already been evaluated!!!!
+			python_list.append(evaluate(item, env))
+			i += 1
+		return python_list
 
 	if head == 'car':
 		new_item = evaluate(rest[0], env)
@@ -300,66 +318,9 @@ def call_regular(list_input,env):
 	for term in list_input:
 		new_list_input.append(evaluate(term,env))
 
-	
 	list_input = new_list_input
 	head, rest = list_input[0], list_input[1:]
-	
-
-	if head == '+':
-		return add(rest)
-	
-	if head == '-':
-		return subtract(rest)
-
-	if head == '*':
-		return mult(rest)
-
-	if head == '/':
-		return div(rest)
-
-	if head == '=':
-		return equal(rest)
-
-	if head == '<':
-		return less(rest)
-
-	if head == '<=':
-		return less_eq(rest)
-
-	if head == '>':
-		return greater(rest)
-
-	if head == '>=':
-		return greater_eq(rest)
-
-	if head == 'not':
-		result = not rest[0]  #without the added space python sees 'notTrue' instead of 'not True'
-		return result
-
-
-	#absolute value
-	if head == 'abs':
-		if len(rest) == 1:
-			return abs(rest[0])
-		else:
-			raise abs_error
-
-
-	#lists
-	if head == 'list':
-		python_list = []
-		list_size = len(list_input)
-		i = 1
-		while i < len(list_input):
-			item = list_input[i] # we do not evaluate here because they have already been evaluated!!!!
-			python_list.append(item)
-			i += 1
-		return python_list
-
-	# if its a function
-	if isinstance(head, MakeFun):
-		return head.do_fun(rest, env)
-
+	return env.fetch(head).do_fun(rest, env)
 
 
 #------ Putting Everything Together ------ 
@@ -367,9 +328,17 @@ def interpret(input, env):
 	output = outter_evaluate(parse(tokenizer(input)), env)
 	return output
 
-def interpret_ft(input):
-	output = outter_evaluate(parse(tokenizer(input)), env = {})
-	return output
+
+def library():
+	library = {'+': MakePyFun(add), '-': MakePyFun(subtract), '*': MakePyFun(mult), '/': MakePyFun(div),
+			 '=': MakePyFun(equal), '<': MakePyFun(less), '<=': MakePyFun(less_eq), 
+			 '>': MakePyFun(greater), '>=': MakePyFun(greater_eq), 'abs': MakePyFun(abs),
+			 'not': MakePyFun(not_func) }
+	scheme_library = {'!': MakeLambda(['n'], parse(tokenizer('(if (= n 0)  1 (* n (! (- n 1))))')))}
+		
+	library.update(scheme_library)
+
+	return library
 
 def repl(env):
 	try: 
@@ -378,9 +347,9 @@ def repl(env):
 			print interpret(x, env)
 		except MyError, e: 
 			print(colored(e.msg, 'red')) 
-		return repl(scope)
+		return repl(global_scope)
 	except KeyboardInterrupt:
 		exit()
 
-scope = Scope({}, None)
-repl(scope)
+global_scope = Scope(library(), None)
+repl(global_scope)

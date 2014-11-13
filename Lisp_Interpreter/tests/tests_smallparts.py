@@ -18,11 +18,4 @@ class TestSmallParts(unittest.TestCase):
  		self.assertEqual(scope.fetch('country'), 'capital') #fetch from current scope
  		self.assertEqual(inner_scope.fetch('country'), 'capital') #fetching passed to parent
 
- 	#def test_evaluate(self):
- 		#self.assertEqual()
-
-
-
-
-	#def test_is_atom(self):
-	#	self.assertEqual()
+	
