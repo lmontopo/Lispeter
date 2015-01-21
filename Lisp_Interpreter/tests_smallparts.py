@@ -1,4 +1,4 @@
-from interpreter.lisp_interpreter import is_atom, is_cons, Scope, is_number
+from lisp_interpreter import is_atom, is_cons, Scope, is_number
 import unittest 
 
 

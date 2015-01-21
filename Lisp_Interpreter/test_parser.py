@@ -1,4 +1,4 @@
-from interpreter.lisp_interpreter import *
+from lisp_interpreter import *
 import unittest 
 
 

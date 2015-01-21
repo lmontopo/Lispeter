@@ -2,19 +2,21 @@ from __future__ import division
 from termcolor import colored
 from sys import exit
 
-#------GlOBAL ARRAYS------
+# ------ GlOBAL ARRAYS ------
 
 symbol = ['+', '-', '*', '/', '<', '>','<=', '=','>=', 'abs', 'list', 'if', 'not',
 			'set!', 'begin', 'let', 'define', 'lambda', 'quote']
 special = ['set!', 'begin', 'let', 'define', 'lambda', 'cond', 'quote', 'if', 
-	'list', 'map', 'cons', 'car', 'cdr']
+			'list', 'map', 'cons', 'car', 'cdr']
 
 
-# --- EXCEPTIONs ---
+# ------ EXCEPTIONs ------
 class MyError(Exception):
 	def __init__(self, msg):
 		self.msg = msg
 
+invalid_input_error = MyError("Error: invalid input type")
+arguments_error = MyError("Error: the wrong number of arguments have been inputed.")
 if_error = MyError("Error: you need to specify by a consequence and an alternate.")
 dict_error = MyError("Error: can't find element in dictionary. Improper input.")
 first_error = MyError('Error: unexpectedly entered parse function with no input.')
@@ -22,17 +24,21 @@ too_many = MyError("Error: too many arguments were inputed.")
 quote_error = MyError('Error: quote only takes one operand.')
 let_error = MyError('Error: let must be followed by a list.')
 
-# ---- TOKENIZE ------ 
+# ------ TOKENIZE ------ 
 def tokenizer(holder):
+	"""splits input into tokens and wraps user input within an outter set of
+	brackets so that the interpreter knows when its reached the input's end"""
+	
 	holder = '(' + holder + ')'
 	holder = holder.replace( '(' , ' ( ' )
 	holder = holder.replace( ')', ' ) ' )
-	final = filter(lambda a: a != '', holder.split(' '))
-	return final
-
+	return filter(lambda a: a != '', holder.split(' '))
+	
   
-# ---- PARSER ----- 
+# ------ PARSER ------ 
 def parse(tokens):
+	"""takes the tokenized input and creates an AST"""
+
 	if len(tokens) == 0:
 		raise first_error
 	
@@ -56,7 +62,7 @@ def parse(tokens):
 		return check_type(token), tokens
 	
 	
-# ----- USEFUL GLOBAL FUNCTIONS ----- 
+# ------ USEFUL GLOBAL FUNCTIONS ------ 
 def check_type(x):
 	try:
 		return float(x)
@@ -72,6 +78,7 @@ def is_number(x):
 		return False	
 	except TypeError:
 		return False	
+
 
 def add(args):
 	return sum(args)
@@ -105,7 +112,7 @@ def not_func(args):
 
 
 
-# --- DEFINING SCOPE --- 
+# ------ DEFINING SCOPE ------ 
 class Scope(object):
 	def __init__(self, env, parent = None):
 		self.env = env
@@ -121,7 +128,7 @@ class Scope(object):
 			return self.parent.fetch(key)
 
 
-# --- CLASS OF FUNCTIONS ---
+# ------ CLASS OF FUNCTIONS ------
 class MakeLambda(object):
 	def __init__(self, first, second):
 		self.first = first
@@ -149,13 +156,15 @@ class MakePyFun(object):
 
 
 
-# ----- INTERPRETER -------
+# ------ INTERPRETER ------
 def outter_evaluate(list_input,env):
+	"""Takes a list containing the user input, calls evaluate() on each item
+	in the list, and returns the result of the last one"""
+
 	evaluated_list = []
 	for expression in list_input:
 		evaluated_list.append(evaluate(expression, env))
 	return evaluated_list[-1]
-
 
 
 def evaluate(list_input,env):
@@ -165,10 +174,9 @@ def evaluate(list_input,env):
 		return is_cons(list_input,env)
 		
 		
-
 def is_atom(list_input,env):
 	if is_number(list_input):			
-		return float(list_input)
+		return list_input
 	elif list_input[0] == "'":   				
 		return list_input[1:]
 	elif list_input == 'else': 				
@@ -176,17 +184,14 @@ def is_atom(list_input,env):
 	elif list_input in symbol:
 		return list_input
 	else: 
-		try:
-			value = env.fetch(list_input)
-			if is_number(value):
-				return value
-			if type(value) is list:
-				return evaluate(value, env)
-			else:
-				return list_input
-		except: #catches all exceptions
-			raise dict_error
-	
+		
+		value = env.fetch(list_input)
+		if is_number(value):
+			return value
+		if type(value) is list:
+			return evaluate(value, env)
+		else:
+			return list_input  #returns 'bla' for when 'bla' is a user defined function
 
 
 def is_cons(list_input,env):
@@ -196,7 +201,6 @@ def is_cons(list_input,env):
 		return call_special(list_input,env)
 	else:
 		return call_regular(list_input,env)
-
 
 
 
@@ -237,7 +241,6 @@ def call_special(list_input, env):
 		env.add_values('lam', func)
 		return 'lam'
 		
-
 	if head == 'if':
 		try: 
 			condition, consequence, alt = rest[0], rest[1], rest[2]
@@ -249,7 +252,6 @@ def call_special(list_input, env):
 		else:
 			return evaluate(alt, env)
 		
-
 	if head == 'quote':
 		if len(list_input) == 2:
 			return rest[0]
@@ -295,7 +297,7 @@ def call_special(list_input, env):
 		list_size = len(list_input)
 		i = 1
 		while i < len(list_input):
-			item = list_input[i] # we do not evaluate here because they have already been evaluated!!!!
+			item = list_input[i] # has already been evaluated
 			python_list.append(evaluate(item, env))
 			i += 1
 		return python_list
@@ -320,25 +322,46 @@ def call_regular(list_input,env):
 
 	list_input = new_list_input
 	head, rest = list_input[0], list_input[1:]
-	return env.fetch(head).do_fun(rest, env)
+	for item in rest:
+		if not is_number(item):
+			raise invalid_input_error
+	try:
+		print head
+		return env.fetch(head).do_fun(rest, env)
+	except TypeError:
+		raise arguments_error
 
 
-#------ Putting Everything Together ------ 
+
+# ------ Putting Everything Together ------ 
 def interpret(input, env):
-	output = outter_evaluate(parse(tokenizer(input)), env)
-	return output
-
+	return outter_evaluate(parse(tokenizer(input)), env)
 
 def library():
-	library = {'+': MakePyFun(add), '-': MakePyFun(subtract), '*': MakePyFun(mult), '/': MakePyFun(div),
-			 '=': MakePyFun(equal), '<': MakePyFun(less), '<=': MakePyFun(less_eq), 
-			 '>': MakePyFun(greater), '>=': MakePyFun(greater_eq), 'abs': MakePyFun(abs),
-			 'not': MakePyFun(not_func) }
-	scheme_library = {'!': MakeLambda(['n'], parse(tokenizer('(if (= n 0)  1 (* n (! (- n 1))))')))}
+	"""Turns the math non-special operators into MakePyFun Instances
+	so that they can all be handled in the same way.
+	Turns any defined 'combination' of these into a MakeLambda instance"""
+
+	library = {	'+': MakePyFun(add), 
+				'-': MakePyFun(subtract), 
+				'*': MakePyFun(mult), 
+				'/': MakePyFun(div),
+			 	'=': MakePyFun(equal), 
+			 	'<': MakePyFun(less), 
+			 	'<=': MakePyFun(less_eq), 
+				'>': MakePyFun(greater), 
+				'>=': MakePyFun(greater_eq),
+				'abs': MakePyFun(abs),
+			 	'not': MakePyFun(not_func) 
+			 	}
+
+	scheme_library = 	{
+	'!': MakeLambda(['n'], parse(tokenizer('(if (= n 0)  1 (* n (! (- n 1))))')))
+						}
 		
 	library.update(scheme_library)
-
 	return library
+
 
 def repl(env):
 	try: 
@@ -351,5 +374,6 @@ def repl(env):
 	except KeyboardInterrupt:
 		exit()
 
-global_scope = Scope(library(), None)
-repl(global_scope)
+if __name__ == "__main__":
+	global_scope = Scope(library(), None)
+	repl(global_scope)
