@@ -1,4 +1,4 @@
-from interpreter.lisp_interpreter import *
+from lisp_interpreter import *
 import unittest 
 
 class Test_Entire(unittest.TestCase):
@@ -24,17 +24,17 @@ class Test_Entire(unittest.TestCase):
 		self.assertEqual(interpret('(not (< 10 (- 20 10)))', Scope(library())), True)
 		self.assertEqual(interpret('(< 0 1 2 3)', Scope(library())), True)
 
+
 	def test_abs(self):
 		self.assertEqual(interpret('(abs -1)', Scope(library())), float(1))
-		#self.assertRaises(abs_error)
+		self.assertRaises(MyError, lambda: interpret('(abs 2 1)', Scope(library())))
 	
 	def test_quote(self):
 		self.assertEqual(interpret('(quote hello2world)', Scope(library())), 'hello2world')
-		with self.assertRaises(MyError):
-			interpret('(quote 12 34)', Scope(library()))
+		self.assertRaises(MyError, lambda: interpret('(quote doaif 1)', Scope(library())))
 	
 	def test_list(self):
-		self.assertEqual(interpret('(list 1 2 3)', Scope(library())), [1.0, 2.0, 3.0])
+		self.assertEqual(interpret('(list 1 2 3)', Scope(library())), [1, 2, 3])
 		self.assertEqual(interpret('(list 1 2 (list 3 4))', Scope(library())), [1.0, 2.0, [3.0, 4.0]])
 		self.assertEqual(interpret('(define test (list 1 2 3)) (car test)', Scope(library())), float(1))
 		self.assertEqual(interpret('(define test (list 1 2 3)) (cdr test)', Scope(library())), [2.0, 3.0])
@@ -46,6 +46,7 @@ class Test_Entire(unittest.TestCase):
 		self.assertEqual(interpret('(define x 3) (+ x 2)', Scope(library())), float(5))
 		self.assertEqual(interpret('(define blah 4) blah', Scope(library())), float(4))
 		self.assertEqual(interpret('(define x 3)(define x 4) x', Scope(library())), float(4))
+		self.assertRaises(MyError, lambda: interpret('(define x 1 3)', Scope(library())))
 
 	def test_if(self):
 		self.assertEqual(interpret('(if (< 10 20) 11 12)', Scope(library())), float(11))
@@ -70,11 +71,9 @@ class Test_Entire(unittest.TestCase):
 	def test_if_handles_recursion(self):
 		self.assertEqual(interpret('(define (fib n) (cond ((= n 0) 0) ((= n 1) 1)'
 						+ '(else (+ (fib (- n 1)) (fib (- n 2)))))) (fib 10)', Scope(library())), float(55))
-		
 
 	def test_if_handles_scheme_func(self):
 		self.assertEqual(interpret('(! 3)', Scope(library())), float(6))
-
 
 	def test_begin(self):
 		self.assertEqual(interpret('(if (< 1 1) (+ 1 1) (begin (define x 3) x))', Scope(library())), float(3))
