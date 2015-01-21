@@ -10,12 +10,14 @@ special = ['set!', 'begin', 'let', 'define', 'lambda', 'cond', 'quote', 'if',
 			'list', 'map', 'cons', 'car', 'cdr']
 
 
-# ------ EXCEPTIONs ------
+# ------ EXCEPTIONS ------
+# Pre-defined exceptions will raise if the user inputs erroneous input.  
+# In some cases this also prevents the python program from crashing
+
 class MyError(Exception):
 	def __init__(self, msg):
 		self.msg = msg
 
-invalid_input_error = MyError("Error: invalid input type")
 arguments_error = MyError("Error: the wrong number of arguments have been inputed.")
 if_error = MyError("Error: you need to specify by a consequence and an alternate.")
 dict_error = MyError("Error: can't find element in dictionary. Improper input.")
@@ -51,15 +53,16 @@ def parse(tokens):
 		while tokens[0] != ')':
 			to_append, tokens = parse(tokens)
 			parsed_input.append(to_append)
-		tokens = tokens[1:]					#pops off the ')' part
+		tokens = tokens[1:]		#pops off the ')' part
 		
-		#we add a condition to check if last return
-		if len(tokens) > 0:
-			return parsed_input, tokens 	#if not last return, need to return current version of holder
-		elif len(tokens) == 0 :
-			return parsed_input						#if last return, only want to return new_holder			
+		if len(tokens) == 0:  #if last return
+			return parsed_input #only returns parsed input
+
+		if len(tokens) > 0: #if not last return
+			return parsed_input, tokens #returns partially parsed input and stuff to be parsed
+								
 	else:
-		return check_type(token), tokens
+		return check_type(token), tokens  #we always return float as float
 	
 	
 # ------ USEFUL GLOBAL FUNCTIONS ------ 
@@ -71,6 +74,7 @@ def check_type(x):
 		
 			
 def is_number(x):
+	"""returns true if is number and false otherwise"""
 	try:
 		float(x)
 		return True
@@ -79,6 +83,9 @@ def is_number(x):
 	except TypeError:
 		return False	
 
+
+# The following functions allow addition, subtraction, mult, etc
+# to take an arbitrary number of arguments (as opposed to just two)
 
 def add(args):
 	return sum(args)
@@ -113,7 +120,13 @@ def not_func(args):
 
 
 # ------ DEFINING SCOPE ------ 
+
 class Scope(object):
+	"""Used to keep track of the scope while while my interpreter interprets.  
+	All scopes beside the global will point to a parent scope. 
+	When a variable is needed the current scope will be
+	searched first, followed by the parent scope if necessary.""" 
+
 	def __init__(self, env, parent = None):
 		self.env = env
 		self.parent = parent
@@ -121,7 +134,7 @@ class Scope(object):
 	def add_values(self,key,value):
 		self.env[key] = value
 
-	def fetch(self, key):
+	def fetch(self, key): #fetch returns none if it can't find item
 		if key in self.env.keys():
 			return self.env[key]
 		elif self.parent != None:
@@ -129,12 +142,19 @@ class Scope(object):
 
 
 # ------ CLASS OF FUNCTIONS ------
+# All standard math and boolean operators are turned into MakePyFun instances
+# All user defined functions and lambda calls will be turned into MakeLambda 
+# intances.  Both MakeLambda and MakePyFun have 'do_fun' methods, so that they
+# can all be executed by calling 'do_fun'.
+
+
 class MakeLambda(object):
+	"""User defined function names will map (in the scope's dictionary)
+	to a MakeLambda instance containing defined params and expression. """
+
 	def __init__(self, first, second):
-		self.first = first
-		self.second = second
-		self.params = self.first
-		self.exp = self.second[-1]
+		self.params = first
+		self.exp = second[-1]  #Scheme accepts many body expressions but only executes last one
 
 	def do_fun(self, args, env):
 		zipped = zip(self.params, args)
@@ -145,6 +165,9 @@ class MakeLambda(object):
 
 
 class MakePyFun(object):
+	"""This is a very simple wrapper around the already defined standard 
+	math functions"""
+
 	def __init__(self, everything):
 		self. everything = everything
 
@@ -168,6 +191,8 @@ def outter_evaluate(list_input,env):
 
 
 def evaluate(list_input,env):
+	"""Redirects expression to either is_atom or is_cons"""
+
 	if not type(list_input) is list:
 	 	return is_atom(list_input,env)	
 	elif type(list_input) is list:		
@@ -175,6 +200,8 @@ def evaluate(list_input,env):
 		
 		
 def is_atom(list_input,env):
+	"""handles the self evaluating expressions, called atoms"""
+
 	if is_number(list_input):			
 		return list_input
 	elif list_input[0] == "'":   				
@@ -184,17 +211,18 @@ def is_atom(list_input,env):
 	elif list_input in symbol:
 		return list_input
 	else: 
-		
 		value = env.fetch(list_input)
-		if is_number(value):
+		if value != None:  #value is none if not in env
 			return value
-		if type(value) is list:
-			return evaluate(value, env)
 		else:
-			return list_input  #returns 'bla' for when 'bla' is a user defined function
-
+			raise dict_error
+		
 
 def is_cons(list_input,env):
+	"""The first element in a list is called the 'head' and it gets applied to the 'rest'.
+	The inputed expression is redirected to either call_special or call_regular depending
+	on whether or not the head is a special form. """
+
 	head, rest = list_input[0], list_input[1:]
 
 	if head in special:
@@ -205,6 +233,9 @@ def is_cons(list_input,env):
 
 
 def call_special(list_input, env):
+	"""Handles all special forms, each special form has
+	their own code to execute and handle it"""
+
 	head, rest = list_input[0], list_input[1:]
 
 	if head == "map":
@@ -228,7 +259,8 @@ def call_special(list_input, env):
 	if head == 'define':
 		if len(rest) == 2:
 			if type(rest[0]) is str:
-				env.add_values(rest[0], rest[1])
+				#env.add_values(rest[0], rest[1])
+				env.add_values(rest[0], evaluate(rest[1], env))   #JUST ADDED NOW TO HELP LIST SITUATION!
 			else:
 				name = rest[0][0]
 				expression = MakeLambda(rest[0][1:], rest[1:])
@@ -315,19 +347,21 @@ def call_special(list_input, env):
 
 	
 def call_regular(list_input,env):
+	"""handles all normal form operators, however, sometimes an entire
+	lambda expression will get here as the 'head' of the expression"""
+
 	new_list_input =[]
 
 	for term in list_input:
-		new_list_input.append(evaluate(term,env))
+		new_list_input.append(evaluate(term,env)) #recursive call
 
 	list_input = new_list_input
 	head, rest = list_input[0], list_input[1:]
-	for item in rest:
-		if not is_number(item):
-			raise invalid_input_error
+
 	try:
-		print head
 		return env.fetch(head).do_fun(rest, env)
+	except AttributeError:
+		return head.do_fun(rest, env)
 	except TypeError:
 		raise arguments_error
 
@@ -338,9 +372,9 @@ def interpret(input, env):
 	return outter_evaluate(parse(tokenizer(input)), env)
 
 def library():
-	"""Turns the math non-special operators into MakePyFun Instances
-	so that they can all be handled in the same way.
-	Turns any defined 'combination' of these into a MakeLambda instance"""
+	"""This library function allows for the global scope to be
+	re-instantiated during testing, thus preventing interaciton between
+	tests (sometimes global scope is modified during interpretation)"""
 
 	library = {	'+': MakePyFun(add), 
 				'-': MakePyFun(subtract), 

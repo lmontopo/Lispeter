@@ -36,7 +36,7 @@ class Test_Entire(unittest.TestCase):
 	def test_list(self):
 		self.assertEqual(interpret('(list 1 2 3)', Scope(library())), [1, 2, 3])
 		self.assertEqual(interpret('(list 1 2 (list 3 4))', Scope(library())), [1.0, 2.0, [3.0, 4.0]])
-		self.assertEqual(interpret('(define test (list 1 2 3)) (car test)', Scope(library())), float(1))
+		self.assertEqual(interpret('(define test (list 1 2 3)) test', Scope(library())), [1.0, 2.0, 3.0])
 		self.assertEqual(interpret('(define test (list 1 2 3)) (cdr test)', Scope(library())), [2.0, 3.0])
 	
 	def test_def(self):
@@ -46,7 +46,9 @@ class Test_Entire(unittest.TestCase):
 		self.assertEqual(interpret('(define x 3) (+ x 2)', Scope(library())), float(5))
 		self.assertEqual(interpret('(define blah 4) blah', Scope(library())), float(4))
 		self.assertEqual(interpret('(define x 3)(define x 4) x', Scope(library())), float(4))
+		self.assertEqual(interpret('(define (function x y) y) (function 2 (quote mine))', Scope(library())), "mine")
 		self.assertRaises(MyError, lambda: interpret('(define x 1 3)', Scope(library())))
+
 
 	def test_if(self):
 		self.assertEqual(interpret('(if (< 10 20) 11 12)', Scope(library())), float(11))
