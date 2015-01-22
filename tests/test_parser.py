@@ -1,4 +1,4 @@
-from lisp_interpreter import *
+from Lisp_Interpreter.lisp_interpreter import parse, tokenizer
 import unittest 
 
 
