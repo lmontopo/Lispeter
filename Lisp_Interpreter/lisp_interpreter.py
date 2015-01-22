@@ -64,7 +64,7 @@ def parse(tokens):
             return parsed_input, tokens #returns partially parsed input and stuff to be parsed
                                 
     else:
-        return check_type(token), tokens  #we always return float as float
+        return check_type(token), tokens  #always return numbers as float
     
     
 
@@ -182,9 +182,8 @@ def evaluate_atom(list_input,env):
         
 
 def evaluate_cons(list_input,env):
-    """The first element in a list is called the 'head' and it gets applied to the 'rest'.
-    The inputed expression is redirected to either evaluate_special or evaluate_regular depending
-    on whether or not the head is a special form. """
+    """Redirects to either evaluate_special or evaluate_regular 
+    depending on whether or not the 'head' is a special form. """
 
     head, rest = list_input[0], list_input[1:]
 
