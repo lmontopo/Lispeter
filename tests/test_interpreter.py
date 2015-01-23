@@ -35,7 +35,8 @@ class Test_Entire(unittest.TestCase):
 	def test_quote(self):
 		self.assertEqual(interpret('(quote hello2world)', Scope(library())), 'hello2world')
 		self.assertRaises(SchemeError, lambda: interpret('(quote doaif 1)', Scope(library())))
-	
+		# self.assertEqual(interpret("(car ''abracadabra)", Scope(library())), 'quote')
+
 	def test_list(self):
 		self.assertEqual(interpret('(list 1 2 3)', Scope(library())), [1, 2, 3])
 		self.assertEqual(interpret('(list 1 2 (list 3 4))', Scope(library())), [1.0, 2.0, [3.0, 4.0]])

@@ -222,7 +222,7 @@ def evaluate_special(list_input, env):
         if len(rest) == 2:      # name binding
             if type(rest[0]) is str:
                 env.add_values(rest[0], evaluate(rest[1], env))   
-            else:               # function definition 
+            else:               # function definition
                 name = rest[0][0]
                 expression = MakeLambda(rest[0][1:], rest[1:])
                 env.add_values(name, expression)
