@@ -307,8 +307,8 @@ def evaluate_special(list_input, env):
 
     
 def evaluate_regular(list_input,env):
-    """handles all normal form operators, however, sometimes an entire
-    lambda expression will get here as the 'head' of the expression"""
+    """handles all normal form operators including user defined functions, 
+    and the lambdas which will have been turned into 'lam' and put into environment"""
 
     new_list_input =[]
 
