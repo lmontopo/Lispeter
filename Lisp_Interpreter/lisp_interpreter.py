@@ -14,8 +14,8 @@ SPECIAL = ['set!', 'begin', 'let', 'define', 'lambda', 'cond', 'quote', 'if',
 
 
 
-# Pre-defined exceptions will raise if the user inputs erroneous input.  
-# In some cases this also prevents the python program from crashing
+# Pre-defined exceptions class that we can create instances of later.
+# In some these errors will prevent our python program from crashing
 
 class SchemeError(Exception):
     def __init__(self, msg):
@@ -161,8 +161,6 @@ def evaluate_atom(list_input,env):
         return list_input
     elif list_input[0] == "'":                  
         return list_input[1:]
-    elif list_input == 'else':              
-        return True 
     elif list_input in SYMBOL:
         return list_input
     else: 
@@ -202,13 +200,13 @@ def evaluate_special(list_input, env):
             return new_list
     
     if head == 'cond':
-        switch = 1
-        while switch == 1:
+        while True:
             for item in rest:
-                if evaluate(item[0],env):
-                    switch = 0
+                print item
+                if (item[0] == 'else'):
+                    return evaluate(item[1], env)
+                elif evaluate(item[0],env):
                     return evaluate(item[1],env)
-            break
 
     if head == 'define':
         if len(rest) == 2:      # name binding
