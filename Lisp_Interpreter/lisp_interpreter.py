@@ -21,14 +21,6 @@ class SchemeError(Exception):
     def __init__(self, msg):
         self.msg = msg
 
-arguments_error = SchemeError("Error: the wrong number of arguments have been inputed.")
-if_error = SchemeError("Error: you need to specify by a consequence and an alternate.")
-dict_error = SchemeError("Error: can't find element in dictionary. Improper input.")
-first_error = SchemeError('Error: unexpectedly entered parse function with no input.')
-too_many = SchemeError("Error: too many arguments were inputed.")
-quote_error = SchemeError('Error: quote only takes one operand.')
-let_error = SchemeError('Error: let must be followed by a list.')
-
 
 def tokenizer(holder):
     """splits input into tokens and wraps user input within an outter set of
@@ -44,7 +36,7 @@ def parse(tokens):
     """takes the tokenized input and creates an AST"""
 
     if len(tokens) == 0:
-        raise first_error
+        raise SchemeError('Error: unexpectedly entered parse function with no input.')
     
     token = tokens[0]
     tokens = tokens[1:]
@@ -178,7 +170,7 @@ def evaluate_atom(list_input,env):
         if value != None:  #value is none if not in env
             return value
         else:
-            raise dict_error
+            raise SchemeError("Error: can't find element in dictionary. Improper input.")
         
 
 def evaluate_cons(list_input,env):
@@ -227,7 +219,7 @@ def evaluate_special(list_input, env):
                 expression = MakeLambda(rest[0][1:], rest[1:])
                 env.add_values(name, expression)
         else:
-            raise too_many
+            raise SchemeError("Error: too many arguments were inputed.")
 
     if head == 'lambda':
         func = MakeLambda(rest[0],rest[1:])
@@ -238,7 +230,7 @@ def evaluate_special(list_input, env):
         try: 
             condition, consequence, alt = rest[0], rest[1], rest[2]
         except:
-            raise if_error
+            raise SchemeError("Error: must specify a consequence and an alternate.")
         if evaluate(condition, env):
             return evaluate(consequence, env)
         else:
@@ -248,7 +240,7 @@ def evaluate_special(list_input, env):
         if len(list_input) == 2:
             return rest[0]
         else:
-            raise quote_error
+            raise SchemeError('Error: quote only takes one operand.')
 
     if head == 'let':
         local_scope = Scope({},env)
@@ -258,7 +250,8 @@ def evaluate_special(list_input, env):
                     local_scope.add_values(a, evaluate(b, env))
             return evaluate(rest[1], local_scope)
         else:
-            raise let_error
+            raise SchemeError('Error: let must be followed by a list.')
+
 
     if head == 'set!':
         if len(rest) == 2:
@@ -323,7 +316,7 @@ def evaluate_regular(list_input,env):
     except AttributeError:
         return head.do_fun(rest, env)
     except TypeError:
-        raise arguments_error
+        raise SchemeError("Error: the wrong number of arguments have been inputed.")
 
 
 
@@ -359,15 +352,15 @@ def library():
 
 
 def repl(env):
-    try: 
-        x = raw_input('> ')
-        try:
-            print interpret(x, env)
-        except SchemeError, e: 
-            print(colored(e.msg, 'red')) 
-        return repl(env)
-    except KeyboardInterrupt:
-        exit()  #exits the program
+    while True:
+        try: 
+            x = raw_input('> ')
+            try:
+                print interpret(x, env)
+            except SchemeError, e: 
+                print(colored(e.msg, 'red')) 
+        except KeyboardInterrupt:
+            exit()  #exits the program
 
 if __name__ == "__main__":
     global_scope = Scope(library(), None)
