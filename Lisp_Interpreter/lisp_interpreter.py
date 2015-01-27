@@ -168,7 +168,7 @@ def evaluate_atom(list_input,env):
         if value != None:  #value is none if not in env
             return value
         else:
-            raise SchemeError("Error: can't find element in dictionary. Improper input.")
+            raise SchemeError("Error: can't find '%s' in dictionary." %list_input)
         
 
 def evaluate_cons(list_input,env):
@@ -238,7 +238,7 @@ def evaluate_special(list_input, env):
         if len(list_input) == 2:
             return rest[0]
         else:
-            raise SchemeError('Error: quote only takes one operand.')
+            raise SchemeError('Error: quote only takes 1 operand. %s have been inputed.' %(len(rest)))
 
     if head == 'let':
         local_scope = Scope({},env)
